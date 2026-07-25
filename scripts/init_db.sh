@@ -13,6 +13,11 @@ if ! [ -x "$(command -v psql)" ]; then
   exit 1
 fi
 
+if [[ -z "${SKIP_DOCKER:-}" ]] && ! [ -x "$(command -v docker)" ]; then
+  echo >&2 "Error: docker is not installed."
+  exit 1
+fi
+
 # endregion ->  Dependency Checks
 
 # region ->     Variable Settings
@@ -20,18 +25,35 @@ DB_USER=${POSTGRES_USER:=postgres}
 DB_PASSWORD=${POSTGRES_PASSWORD:=secret}
 DB_NAME=${POSTGRES_NAME:=newsletter}
 DB_PORT=${POSTGRES_PORT:=5432}
+POSTGRES_VERSION=${POSTGRES_VERSION:=16}
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname -- "${SCRIPT_DIR}")"
+
+# Docker Hub is blocked by Zscaler on the managed macOS environment. Google's
+# Docker Hub mirror serves the same official image and is accessible there.
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  DEFAULT_POSTGRES_IMAGE="mirror.gcr.io/library/postgres:${POSTGRES_VERSION}"
+else
+  DEFAULT_POSTGRES_IMAGE="postgres:${POSTGRES_VERSION}"
+fi
+POSTGRES_IMAGE=${POSTGRES_IMAGE:=${DEFAULT_POSTGRES_IMAGE}}
 # endregion ->  Variable Settings
 
 # region ->     Starting Container
-if [[ -z "${SKIP_DOCKER}" ]]
+if [[ -z "${SKIP_DOCKER:-}" ]]
 then
-  docker run \
-    -e POSTGRES_USER=${DB_USER} \
-    -e POSTGRES_PASSWORD=${DB_PASSWORD} \
-    -e POSTGRES_DB=${DB_NAME} \
-    -p "${DB_PORT}":5432 \
-    -d postgres \
-    postgres -N 1000
+  if PGPASSWORD="${DB_PASSWORD}" psql -h localhost -U "${DB_USER}" -p "${DB_PORT}" -d postgres -c '\q' >/dev/null 2>&1
+  then
+    >&2 echo "Postgres is already running on port ${DB_PORT}; reusing it"
+  else
+    docker run \
+      -e POSTGRES_USER="${DB_USER}" \
+      -e POSTGRES_PASSWORD="${DB_PASSWORD}" \
+      -e POSTGRES_DB="${DB_NAME}" \
+      -p "${DB_PORT}":5432 \
+      -d "${POSTGRES_IMAGE}" \
+      postgres -N 1000
+  fi
 fi
 # endregion ->  Starting Container
 
@@ -47,6 +69,6 @@ done
 
 export DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}
 sqlx database create
-sqlx migrate run
+sqlx migrate run --source "${PROJECT_ROOT}/migrations"
 
 >&2 echo "Postgres has been migrated, ready to go!"
