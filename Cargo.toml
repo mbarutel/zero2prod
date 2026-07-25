@@ -22,10 +22,12 @@ actix-web = "4.13.0"
 chrono = "0.4.45"
 config = "0.15.24"
 once_cell = "1.21.4"
+secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 sqlx = { version = "0.9.0", features = ["macros", "postgres", "uuid", "chrono", "migrate", "runtime-tokio", "tls-rustls"] }
 tokio = { version = "1.52.3", features = ["full"] }
 tracing = { version = "0.1.44", features = ["log"] }
+tracing-actix-web = "0.7.22"
 tracing-bunyan-formatter = "0.3.10"
 tracing-log = "0.2.0"
 tracing-subscriber = { version = "0.3.23", features = ["registry", "env-filter"] }
