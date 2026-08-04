@@ -24,6 +24,7 @@ config = "0.15.24"
 once_cell = "1.21.4"
 secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
+serde-aux = "4.7.0"
 sqlx = { version = "0.9.0", features = ["macros", "postgres", "uuid", "chrono", "migrate", "runtime-tokio", "tls-rustls"] }
 tokio = { version = "1.52.3", features = ["full"] }
 tracing = { version = "0.1.44", features = ["log"] }
